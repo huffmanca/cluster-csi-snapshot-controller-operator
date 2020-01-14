@@ -9,9 +9,11 @@ import (
 
 	csisnapshotconfigclient "github.com/openshift/client-go/operator/clientset/versioned"
 	informer "github.com/openshift/client-go/operator/informers/externalversions"
+	controllercommon "github.com/openshift/huffmanca/pkg/controller/common"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -19,13 +21,20 @@ const (
 )
 
 func RunOperator(ctx context.Context, controllerConfig *controllercmd.ControllerContext) error {
+	ctrlctx := controllercommon.CreateControllerContext(cb, ctx.Done(), componentNamespace)
+
+	kubeClient, err := kubernetes.NewForConfig(ctx.ProtoKubeConfig)
+	if err != nil {
+		return err
+	}
+
 	configClient, err := csisnapshotconfigclient.NewForConfig(controllerConfig.KubeConfig)
 	if err != nil {
 		return err
 	}
 
 	configInformers := informer.NewSharedInformerFactoryWithOptions(configClient, resync,
-		informer.WithTweakListOptions(singleNameListOptions("cluster")),
+		informer.WithTweakListOptions(singleNameListOptions(globalConfigName)),
 	)
 
 	operatorClient := &OperatorClient{

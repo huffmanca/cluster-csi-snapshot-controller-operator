@@ -10,10 +10,13 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	restclient "k8s.io/client-go/rest"
+
 	"github.com/openshift/library-go/pkg/operator/events"
-	//"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/status"
 
@@ -50,17 +53,22 @@ var (
 
 type csiSnapshotOperator struct {
 	client        OperatorClient
+	crdClient	  *apiextclient.Clientset
+	kubeConfig	  *restclient.Config
 	versionGetter status.VersionGetter
 	recorder      events.Recorder
 }
 
 func NewCSISnapshotControllerOperator(
 	client OperatorClient,
+	kubeConfig *restclient.Config,
 	versionGetter status.VersionGetter,
 	recorder events.Recorder,
 ) operator.Runner {
 	csiOperator := &csiSnapshotOperator{
 		client:        client,
+		kubeConfig:    kubeConfig,
+		crdClient:     apiextclient.NewForConfigOrDie(kubeConfig),
 		versionGetter: versionGetter,
 		recorder:      recorder,
 	}
@@ -68,18 +76,17 @@ func NewCSISnapshotControllerOperator(
 	return operator.New("CSISnapshotControllerOperator", csiOperator)
 }
 
-/*
-func (c *csiSnapshotOperator) initCRDs(client client.Client) {
+func (c *csiSnapshotOperator) initCRDs() {
 	// Initialize the Snapshot Controller CRDs
+	createCRD := crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().Create
 	for _, file := range crds {
-		crd, err := newCRDForCluster(file)
-		_, createdSuccessfully, err := resourceapply.ApplyCustomResourceDefinition(client, c.recorder, crd)
-
-		if !createdSuccessfully || err != nil {
+		crd := resourceread.ReadCustomResourceDefinitionV1Beta1OrDie(generated.MustAsset(file))
+		_, updated, err := resourceapply.ApplyCustomResourceDefinition(c.crdClient, crd)
+		if err != nil {
+			return err
 		}
 	}
 }
-*/
 
 func (c *csiSnapshotOperator) Key() (metav1.Object, error) {
 	return c.client.Client.OpenShiftControllerManagers().Get(globalConfigName, metav1.GetOptions{})
@@ -99,9 +106,4 @@ func (c *csiSnapshotOperator) Sync(obj metav1.Object) error {
 	// Update CSISnapshotController.Status
 
 	return errors.New("unsupported function")
-}
-
-// Attempts to create a new CRD in the cluster
-func newCRDForCluster(filename string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
-	return resourceread.ReadCustomResourceDefinitionV1Beta1OrDie(generated.MustAsset(filename)), nil
 }
