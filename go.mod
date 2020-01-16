@@ -3,7 +3,6 @@ module github.com/openshift/cluster-csi-snapshot-controller-operator
 go 1.13
 
 require (
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
 	github.com/openshift/api v0.0.0-20191217141120-791af96035a5
 	github.com/openshift/client-go v0.0.0-20191216194936-57f413491e9e
@@ -15,6 +14,7 @@ require (
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v0.17.0
 	k8s.io/component-base v0.17.0
+	k8s.io/klog v1.0.0
 	monis.app/go v0.0.0-20190702030534-c65526068664
 	sigs.k8s.io/controller-runtime v0.4.0
 )
