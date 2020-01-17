@@ -87,6 +87,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	}{
 		csiConfigInformers,
 		configInformers,
+		ctrlctx.APIExtInformerFactory,
 	} {
 		informer.Start(ctx.Done())
 	}
@@ -102,6 +103,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		go controller.Run(ctx, 1)
 	}
 	klog.Info("Starting the operator.")
+	//go operator.Run(1, ctrlctx.Stop)
 	go operator.Run(ctx.Done())
 
 	<-ctx.Done()

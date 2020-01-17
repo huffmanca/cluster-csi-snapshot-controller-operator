@@ -1,12 +1,11 @@
 package operator
 
 import (
-	"errors"
 	"os"
 
-	"monis.app/go/openshift/operator"
-
 	"github.com/openshift/cluster-csi-snapshot-controller-operator/pkg/generated"
+
+	"monis.app/go/openshift/operator"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -49,6 +48,8 @@ var (
 	csiSnapshotControllerImage = os.Getenv(targetNameController)
 
 	operatorVersion = os.Getenv(operatorVersionEnvName)
+
+	crdNames = []string{"volumesnapshotclasses.snapshot.storage.k8s.io", "volumesnapshotcontents.snapshot.storage.k8s.io", "volumesnapshots.snapshot.storage.k8s.io"}
 )
 
 type csiSnapshotOperator struct {
@@ -68,20 +69,20 @@ func NewCSISnapshotControllerOperator(
 ) operator.Runner {
 	csiOperator := &csiSnapshotOperator{
 		client:        client,
+		crdInformer:   crdInformer,
 		crdClient:     crdClient,
 		versionGetter: versionGetter,
 		recorder:      recorder,
 	}
 
-	csiOperator.handleCRDConfig()
-	targetNameFilter := operator.FilterByNames(targetName)
+	crdNameFilter := operator.FilterByNames(crdNames...)
 
-	return operator.New("CSISnapshotControllerOperator", csiOperator,
-		operator.WithInformer(crdInformer, targetNameFilter))
+	return operator.New(targetName, csiOperator,
+		operator.WithInformer(crdInformer, crdNameFilter))
 }
 
 func (c *csiSnapshotOperator) Key() (metav1.Object, error) {
-	return c.client.Client.OpenShiftControllerManagers().Get(globalConfigName, metav1.GetOptions{})
+	return c.client.Client.CSISnapshotControllers().Get(globalConfigName, metav1.GetOptions{})
 }
 
 func (c *csiSnapshotOperator) Sync(obj metav1.Object) error {
@@ -96,10 +97,10 @@ func (c *csiSnapshotOperator) Sync(obj metav1.Object) error {
 	// If it does exist and doesn't match, overwrite it
 
 	klog.Info("Running Sync")
-	c.handleCRDConfig()
+	return c.handleCRDConfig()
 
 	// Update CSISnapshotController.Status
-	return errors.New("unsupported function")
+	//return errors.New("unsupported function")
 }
 
 func (c *csiSnapshotOperator) handleCRDConfig() error {
