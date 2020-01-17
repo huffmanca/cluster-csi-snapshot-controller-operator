@@ -4,9 +4,9 @@ import (
 	"errors"
 	"os"
 
-	"monis.app/go/openshift/operator"
-
 	"github.com/openshift/cluster-csi-snapshot-controller-operator/pkg/generated"
+
+	"monis.app/go/openshift/operator"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -33,6 +33,7 @@ const (
 	targetNameSpaceController = "openshift-csi-controller"
 	targetNameOperator        = "openshift-csi-snapshot-controller-operator"
 	targetNameController      = "openshift-csi-snapshot-controller"
+	crdName                   = "volumesnapshot"
 	globalConfigName          = "cluster"
 
 	operatorSelfName       = "operator"
@@ -68,16 +69,25 @@ func NewCSISnapshotControllerOperator(
 ) operator.Runner {
 	csiOperator := &csiSnapshotOperator{
 		client:        client,
+		crdInformer:   crdInformer,
 		crdClient:     crdClient,
 		versionGetter: versionGetter,
 		recorder:      recorder,
 	}
 
 	csiOperator.handleCRDConfig()
-	targetNameFilter := operator.FilterByNames(targetName)
+	targetNameFilter := operator.FilterByNames(crdName)
 
-	return operator.New("CSISnapshotControllerOperator", csiOperator,
+	return operator.New(targetName, csiOperator,
 		operator.WithInformer(crdInformer, targetNameFilter))
+}
+
+func (c *csiSnapshotOperator) Run(workers int, stopCh <-chan struct{}) {
+	klog.Info("Running CSI Operator")
+
+	c.handleCRDConfig()
+
+	<-stopCh
 }
 
 func (c *csiSnapshotOperator) Key() (metav1.Object, error) {

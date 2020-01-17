@@ -66,6 +66,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		clusterOperatorName,
 		[]configv1.ObjectReference{
+			{Resource: "crds", Name: "volumesnapshotclasses.snapshot.storage.k8s.io"},
 			{Resource: "namespaces", Name: targetNamespace},
 			{Resource: "namespaces", Name: targetNameSpaceController},
 		},
@@ -102,6 +103,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		go controller.Run(ctx, 1)
 	}
 	klog.Info("Starting the operator.")
+	//go operator.Run(1, ctrlctx.Stop)
 	go operator.Run(ctx.Done())
 
 	<-ctx.Done()
